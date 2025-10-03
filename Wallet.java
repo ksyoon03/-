@@ -1,41 +1,44 @@
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 public class Wallet {
-    // transient 키워드는 이 필드를 JSON으로 저장할 때 제외하라는 의미입니다.
-    // owner 정보는 Map의 키 값으로 관리되므로 중복 저장을 피하기 위함입니다.
     private transient String owner;
-// 기존 Wallet.java 코드에 아래 메소드 2개를 추가하세요.
-
-    // 보유 코인의 현재 가치를 계산
-    public double getHoldingCoinValue(double currentPrice) {
-        return this.coinCount * currentPrice;
-    }
-
-    // 총 자산(현금 + 코인 평가액)을 계산
-    public double getTotalAssets(double currentPrice) {
-        return this.cash + getHoldingCoinValue(currentPrice);
-    }
-
     private double cash;
-    private double coinCount;
+    private Map<String, Double> coinBalances; // Map<코인 티커, 보유 수량>
 
-    public Wallet(String ownerName, double initialCash, double initialCoin) {
+    public Wallet(String ownerName, double initialCash) {
         this.owner = ownerName;
         this.cash = initialCash;
-        this.coinCount = initialCoin;
+        this.coinBalances = new ConcurrentHashMap<>();
     }
 
-    // --- Getter & Setter 메소드들 ---
+    public void updateCoinBalance(String coinTicker, double quantity) {
+        if (quantity > 0) {
+            coinBalances.put(coinTicker, quantity);
+        } else {
+            coinBalances.remove(coinTicker);
+        }
+    }
+
+    public double getCoinBalance(String coinTicker) {
+        return coinBalances.getOrDefault(coinTicker, 0.0);
+    }
+
+    public double getTotalAssets(Map<String, Double> currentPrices) {
+        double totalCoinValue = 0.0;
+        for (Map.Entry<String, Double> entry : coinBalances.entrySet()) {
+            String coinTicker = entry.getKey();
+            double quantity = entry.getValue();
+            // 마켓 코드는 "KRW-" + 티커 형식이라고 가정합니다.
+            double price = currentPrices.getOrDefault("KRW-" + coinTicker, 0.0);
+            totalCoinValue += quantity * price;
+        }
+        return this.cash + totalCoinValue;
+    }
 
     public String getOwner() { return owner; }
     public void setOwner(String owner) { this.owner = owner; }
     public double getCash() { return cash; }
     public void setCash(double cash) { this.cash = cash; }
-    public double getCoinCount() { return coinCount; }
-    public void setCoinCount(double coinCount) { this.coinCount = coinCount; }
-
-    public void printStatus() {
-        System.out.println("--- " + this.owner + "님의 지갑 ---");
-        System.out.println("현금 보유액: " + this.cash + "원");
-        System.out.println("코인 보유량: " + this.coinCount + "개");
-        System.out.println("--------------------------");
-    }
+    public Map<String, Double> getCoinBalances() { return coinBalances; }
 }
