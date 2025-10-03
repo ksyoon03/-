@@ -1,3 +1,5 @@
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -5,38 +7,43 @@ import java.util.concurrent.TimeUnit;
 public class MarketSimulator {
 
     private final PriceService priceService;
-    // 'volatile'은 여러 스레드가 이 변수를 사용할 때 항상 최신 값을 보장해주는 키워드입니다.
-    private volatile double currentBtcPrice;
+    private volatile Map<String, Double> currentPrices;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public MarketSimulator(PriceService priceService) {
         this.priceService = priceService;
-        this.currentBtcPrice = -1.0; // 초기값
+        this.currentPrices = new ConcurrentHashMap<>();
     }
 
-    // 백그라운드에서 주기적으로 시세를 업데이트하는 작업을 시작합니다.
     public void start() {
-        // Runnable은 실행할 작업을 정의합니다.
         final Runnable priceUpdater = () -> {
-            double price = priceService.getCurrentBtcPrice();
-            if (price > 0) {
-                this.currentBtcPrice = price;
-                // println을 printf로 변경하고 서식을 추가합니다.
-                // %,.0f : 쉼표(,)를 추가하고 소수점 없이(0) 실수(f)를 출력
-                System.out.printf("✅ 실시간 BTC 가격 업데이트: %,.0f원%n", this.currentBtcPrice);
+            Map<String, Double> prices = priceService.getCoinPrices();
+            if (!prices.isEmpty()) {
+                this.currentPrices = prices;
+
+                // --- 이 부분을 수정합니다 ---
+                System.out.println("✅ 실시간 시세 업데이트:");
+                for (Map.Entry<String, Double> entry : this.currentPrices.entrySet()) {
+                    // printf를 사용해 깔끔한 형식으로 출력합니다.
+                    // %-10s : 10자리 문자열 공간을 확보하고 왼쪽 정렬
+                    // %,.0f : 쉼표를 포함하고 소수점 없이 출력
+                    System.out.printf("\t- %-10s : %,.0f원%n", entry.getKey(), entry.getValue());
+                }
+                System.out.println("------------------------------------");
+                // --- 여기까지 수정 ---
             }
         };
-
-        // 0초 후 시작해서, 매 5초마다 priceUpdater 작업을 실행합니다.
         scheduler.scheduleAtFixedRate(priceUpdater, 0, 5, TimeUnit.SECONDS);
     }
 
-    // 저장된 최신 가격을 반환합니다.
-    public double getCurrentBtcPrice() {
-        return this.currentBtcPrice;
+    public double getPrice(String market) {
+        return this.currentPrices.getOrDefault(market, -1.0);
     }
 
-    // 서버 종료 시 스케줄러를 안전하게 종료합니다.
+    public Map<String, Double> getAllPrices() {
+        return this.currentPrices;
+    }
+
     public void stop() {
         scheduler.shutdown();
     }
