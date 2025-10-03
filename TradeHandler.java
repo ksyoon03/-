@@ -10,51 +10,61 @@ import java.util.Map;
 public class TradeHandler implements HttpHandler {
     private final TradingService tradingService;
     private final MarketSimulator marketSimulator;
+    private final UserService userService;
 
-    public TradeHandler(TradingService tradingService, MarketSimulator marketSimulator) {
+    public TradeHandler(TradingService tradingService, MarketSimulator marketSimulator, UserService userService) {
         this.tradingService = tradingService;
         this.marketSimulator = marketSimulator;
+        this.userService = userService;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod();
-        String response = "";
-        int statusCode = 200;
+        String token = exchange.getRequestHeaders().getFirst("X-Auth-Token");
+        String userId = userService.getUsernameFromToken(token);
 
-        if ("POST".equalsIgnoreCase(method)) {
-            double currentPrice = marketSimulator.getCurrentBtcPrice();
-            if (currentPrice < 0) {
-                sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Market price is not available.\"}", 503);
-                return;
-            }
-
-            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-            Map<String, String> params = parseQuery(body);
-
-            String action = params.get("action");
-            String userId = params.get("userId");
-            double quantity = Double.parseDouble(params.getOrDefault("quantity", "0"));
-
-            boolean result = false;
-            if ("buy".equals(action)) {
-                result = tradingService.buyCoin(userId, currentPrice, quantity);
-            } else if ("sell".equals(action)) {
-                result = tradingService.sellCoin(userId, currentPrice, quantity);
-            }
-
-            if (result) {
-                response = "{\"status\":\"success\", \"userId\":\"" + userId + "\", \"price\":" + currentPrice + ", \"quantity\":" + quantity + "}";
-                tradingService.saveDataToFile();
-            } else {
-                statusCode = 400;
-                response = "{\"status\":\"failed\", \"message\":\"Trade failed. Check balance or quantity.\"}";
-            }
-        } else {
-            statusCode = 405;
-            response = "{\"error\":\"POST method is required.\"}";
+        if (userId == null) {
+            sendResponse(exchange, "{\"error\":\"Unauthorized\"}", 401);
+            return;
         }
-        sendResponse(exchange, response, statusCode);
+
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, "{\"error\":\"POST method is required.\"}", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        Map<String, String> params = parseQuery(body);
+
+        String action = params.get("action");
+        String market = params.get("market");
+        double quantity = Double.parseDouble(params.getOrDefault("quantity", "0"));
+
+        if (market == null || market.isEmpty()) {
+            sendResponse(exchange, "{\"error\":\"'market' parameter is required.\"}", 400);
+            return;
+        }
+
+        double currentPrice = marketSimulator.getPrice(market);
+        if (currentPrice < 0) {
+            sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Market price is not available for " + market + ".\"}", 503);
+            return;
+        }
+
+        boolean result = false;
+        if ("buy".equals(action)) {
+            result = tradingService.buyCoin(userId, market, currentPrice, quantity);
+        } else if ("sell".equals(action)) {
+            result = tradingService.sellCoin(userId, market, currentPrice, quantity);
+        }
+
+        if (result) {
+            String response = "{\"status\":\"success\", \"userId\":\"" + userId + "\", \"market\":\"" + market + "\", \"price\":" + currentPrice + ", \"quantity\":" + quantity + "}";
+            tradingService.saveDataToFile();
+            sendResponse(exchange, response, 200);
+        } else {
+            sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Trade failed. Check balance or quantity.\"}", 400);
+        }
     }
 
     private void sendResponse(HttpExchange exchange, String response, int statusCode) throws IOException {
