@@ -61,7 +61,8 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.coin_investment.Main</mainClass>
-                    <executable>C:\Users\82104\.jdks\temurin-21.0.8\bin\java.exe</executable>
+                    <executable>${java.home}/bin/java</executable>
+
                 </configuration>
             </plugin>
         </plugins>
