@@ -1,0 +1,17 @@
+# 데이터 파일
+wallets.json
+users.json
+
+# Eclipse 설정 파일
+.classpath
+.project
+.settings/
+
+# IntelliJ 설정 파일
+.idea/
+*.iml
+
+# 빌드 결과물
+bin/
+build/
+out/
