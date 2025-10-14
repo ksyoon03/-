@@ -1,14 +1,15 @@
+
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 
 public class ApiServer {
     public static void main(String[] args) throws Exception {
-        // UserService 관련 코드를 모두 삭제합니다.
+        // 서비스 객체들을 생성합니다.
         PriceService priceService = new PriceService();
         MarketSimulator marketSimulator = new MarketSimulator(priceService);
         TradingService tradingService = new TradingService();
 
-        // 테스트용 사용자를 다시 직접 등록합니다.
+        // 테스트용 사용자를 직접 등록합니다.
         if (tradingService.getWallet("userA") == null) {
             tradingService.registerUser("userA", 100000000.0); // 1억원
             Wallet userAWallet = tradingService.getWallet("userA");
@@ -22,19 +23,23 @@ public class ApiServer {
         }
         tradingService.saveDataToFile();
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        // 8081 포트로 서버를 생성합니다.
+        HttpServer server = HttpServer.create(new InetSocketAddress(8081), 0);
 
-        // 핸들러 생성 시 UserService를 넘겨주지 않습니다.
+        // 각 경로에 맞는 핸들러를 연결합니다.
         server.createContext("/trade", new TradeHandler(tradingService, marketSimulator));
         server.createContext("/wallet", new WalletHandler(tradingService, marketSimulator));
 
         server.setExecutor(null);
 
+
         marketSimulator.start();
         server.start();
 
-        System.out.println("백엔드 API 서버가 8080 포트에서 실행 중입니다...");
+        System.out.println("백엔드 API 서버가 8081 포트에서 실행 중입니다...");
+        System.out.println("서버를 중지하려면 Ctrl+C를 누르세요.");
 
+        // 프로그램이 종료될 때 데이터가 자동 저장되도록 설정
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\n서버를 종료합니다...");
             marketSimulator.stop();

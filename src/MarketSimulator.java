@@ -22,7 +22,7 @@ public class MarketSimulator {
                 this.currentPrices = prices;
 
                 // --- 이 부분을 수정합니다 ---
-                System.out.println("✅ 실시간 시세 업데이트:");
+                System.out.println("실시간 시세 업데이트:");
                 for (Map.Entry<String, Double> entry : this.currentPrices.entrySet()) {
                     // printf를 사용해 깔끔한 형식으로 출력합니다.
                     // %-10s : 10자리 문자열 공간을 확보하고 왼쪽 정렬
