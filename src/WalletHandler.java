@@ -12,46 +12,50 @@ import java.util.Map;
 public class WalletHandler implements HttpHandler {
     private final TradingService tradingService;
     private final MarketSimulator marketSimulator;
-    private final UserService userService;
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    public WalletHandler(TradingService tradingService, MarketSimulator marketSimulator, UserService userService) {
+    public WalletHandler(TradingService tradingService, MarketSimulator marketSimulator) {
         this.tradingService = tradingService;
         this.marketSimulator = marketSimulator;
-        this.userService = userService;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String token = exchange.getRequestHeaders().getFirst("X-Auth-Token");
-        String userId = userService.getUsernameFromToken(token);
+        String method = exchange.getRequestMethod();
+        String response;
+        int statusCode = 200;
 
-        if (userId == null) {
-            sendResponse(exchange, "{\"error\":\"Unauthorized\"}", 401);
-            return;
-        }
+        if ("GET".equalsIgnoreCase(method)) {
+            // 토큰 대신 다시 URL 쿼리에서 userId를 받습니다.
+            Map<String, String> params = parseQuery(exchange.getRequestURI().getQuery());
+            String userId = params.get("userId");
 
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            sendResponse(exchange, "{\"error\":\"GET method is required.\"}", 405);
-            return;
-        }
+            if (userId == null || userId.isEmpty()){
+                sendResponse(exchange, "{\"error\":\"'userId' parameter is required.\"}", 400);
+                return;
+            }
 
-        Wallet wallet = tradingService.getWallet(userId);
-        Map<String, Double> currentPrices = marketSimulator.getAllPrices();
+            Wallet wallet = tradingService.getWallet(userId);
+            Map<String, Double> currentPrices = marketSimulator.getAllPrices();
 
-        if (wallet != null && !currentPrices.isEmpty()) {
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("userId", userId);
-            responseMap.put("cash", wallet.getCash());
-            responseMap.put("coinBalances", wallet.getCoinBalances());
-            responseMap.put("totalAssets", wallet.getTotalAssets(currentPrices));
-            responseMap.put("currentPrices", currentPrices);
+            if (wallet != null && !currentPrices.isEmpty()) {
+                Map<String, Object> responseMap = new HashMap<>();
+                responseMap.put("userId", userId);
+                responseMap.put("cash", wallet.getCash());
+                responseMap.put("coinBalances", wallet.getCoinBalances());
+                responseMap.put("totalAssets", wallet.getTotalAssets(currentPrices));
+                responseMap.put("currentPrices", currentPrices);
 
-            String response = gson.toJson(responseMap);
-            sendResponse(exchange, response, 200);
+                response = gson.toJson(responseMap);
+            } else {
+                statusCode = 404;
+                response = "{\"error\":\"User not found or price not available.\"}";
+            }
         } else {
-            sendResponse(exchange, "{\"error\":\"User wallet not found or price not available.\"}", 404);
+            statusCode = 405;
+            response = "{\"error\":\"GET method is required.\"}";
         }
+        sendResponse(exchange, response, statusCode);
     }
 
     private void sendResponse(HttpExchange exchange, String response, int statusCode) throws IOException {
@@ -63,7 +67,6 @@ public class WalletHandler implements HttpHandler {
         os.close();
     }
 
-    // 이 핸들러는 URL 쿼리를 사용하지 않지만, 향후 확장을 위해 남겨둘 수 있습니다.
     private Map<String, String> parseQuery(String query) {
         Map<String, String> result = new HashMap<>();
         if (query == null || query.isEmpty()) return result;

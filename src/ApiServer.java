@@ -3,21 +3,30 @@ import java.net.InetSocketAddress;
 
 public class ApiServer {
     public static void main(String[] args) throws Exception {
-        // 모든 서비스 객체 생성
-        UserService userService = new UserService();
+        // UserService 관련 코드를 모두 삭제합니다.
         PriceService priceService = new PriceService();
         MarketSimulator marketSimulator = new MarketSimulator(priceService);
         TradingService tradingService = new TradingService();
 
+        // 테스트용 사용자를 다시 직접 등록합니다.
+        if (tradingService.getWallet("userA") == null) {
+            tradingService.registerUser("userA", 100000000.0); // 1억원
+            Wallet userAWallet = tradingService.getWallet("userA");
+            if(userAWallet != null) {
+                userAWallet.updateCoinBalance("BTC", 2.0);
+                userAWallet.updateCoinBalance("ETH", 10.0);
+            }
+        }
+        if (tradingService.getWallet("userB") == null) {
+            tradingService.registerUser("userB", 50000000.0); // 5천만원
+        }
+        tradingService.saveDataToFile();
+
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
-        // 새로운 핸들러들을 각 경로에 등록
-        server.createContext("/register", new RegisterHandler(userService, tradingService));
-        server.createContext("/login", new LoginHandler(userService));
-
-        // 기존 핸들러 생성자에 userService 추가
-        server.createContext("/trade", new TradeHandler(tradingService, marketSimulator, userService));
-        server.createContext("/wallet", new WalletHandler(tradingService, marketSimulator, userService));
+        // 핸들러 생성 시 UserService를 넘겨주지 않습니다.
+        server.createContext("/trade", new TradeHandler(tradingService, marketSimulator));
+        server.createContext("/wallet", new WalletHandler(tradingService, marketSimulator));
 
         server.setExecutor(null);
 

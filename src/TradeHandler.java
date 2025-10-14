@@ -10,61 +10,58 @@ import java.util.Map;
 public class TradeHandler implements HttpHandler {
     private final TradingService tradingService;
     private final MarketSimulator marketSimulator;
-    private final UserService userService;
 
-    public TradeHandler(TradingService tradingService, MarketSimulator marketSimulator, UserService userService) {
+    public TradeHandler(TradingService tradingService, MarketSimulator marketSimulator) {
         this.tradingService = tradingService;
         this.marketSimulator = marketSimulator;
-        this.userService = userService;
     }
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        String token = exchange.getRequestHeaders().getFirst("X-Auth-Token");
-        String userId = userService.getUsernameFromToken(token);
+        String method = exchange.getRequestMethod();
+        String response = "";
+        int statusCode = 200;
 
-        if (userId == null) {
-            sendResponse(exchange, "{\"error\":\"Unauthorized\"}", 401);
-            return;
-        }
+        if ("POST".equalsIgnoreCase(method)) {
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            Map<String, String> params = parseQuery(body);
 
-        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-            sendResponse(exchange, "{\"error\":\"POST method is required.\"}", 405);
-            return;
-        }
+            // 토큰 대신 다시 userId를 직접 받습니다.
+            String userId = params.get("userId");
+            String action = params.get("action");
+            String market = params.get("market");
+            double quantity = Double.parseDouble(params.getOrDefault("quantity", "0"));
 
-        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> params = parseQuery(body);
+            if (userId == null || userId.isEmpty() || market == null || market.isEmpty()) {
+                sendResponse(exchange, "{\"error\":\"'userId' and 'market' parameters are required.\"}", 400);
+                return;
+            }
 
-        String action = params.get("action");
-        String market = params.get("market");
-        double quantity = Double.parseDouble(params.getOrDefault("quantity", "0"));
+            double currentPrice = marketSimulator.getPrice(market);
+            if (currentPrice < 0) {
+                sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Market price is not available for " + market + ".\"}", 503);
+                return;
+            }
 
-        if (market == null || market.isEmpty()) {
-            sendResponse(exchange, "{\"error\":\"'market' parameter is required.\"}", 400);
-            return;
-        }
+            boolean result = false;
+            if ("buy".equals(action)) {
+                result = tradingService.buyCoin(userId, market, currentPrice, quantity);
+            } else if ("sell".equals(action)) {
+                result = tradingService.sellCoin(userId, market, currentPrice, quantity);
+            }
 
-        double currentPrice = marketSimulator.getPrice(market);
-        if (currentPrice < 0) {
-            sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Market price is not available for " + market + ".\"}", 503);
-            return;
-        }
-
-        boolean result = false;
-        if ("buy".equals(action)) {
-            result = tradingService.buyCoin(userId, market, currentPrice, quantity);
-        } else if ("sell".equals(action)) {
-            result = tradingService.sellCoin(userId, market, currentPrice, quantity);
-        }
-
-        if (result) {
-            String response = "{\"status\":\"success\", \"userId\":\"" + userId + "\", \"market\":\"" + market + "\", \"price\":" + currentPrice + ", \"quantity\":" + quantity + "}";
-            tradingService.saveDataToFile();
-            sendResponse(exchange, response, 200);
+            if (result) {
+                response = "{\"status\":\"success\", \"userId\":\"" + userId + "\", \"market\":\"" + market + "\", \"price\":" + currentPrice + ", \"quantity\":" + quantity + "}";
+                tradingService.saveDataToFile();
+            } else {
+                statusCode = 400;
+                response = "{\"status\":\"failed\", \"message\":\"Trade failed. Check balance or quantity.\"}";
+            }
         } else {
-            sendResponse(exchange, "{\"status\":\"failed\", \"message\":\"Trade failed. Check balance or quantity.\"}", 400);
+            statusCode = 405;
+            response = "{\"error\":\"POST method is required.\"}";
         }
+        sendResponse(exchange, response, statusCode);
     }
 
     private void sendResponse(HttpExchange exchange, String response, int statusCode) throws IOException {
