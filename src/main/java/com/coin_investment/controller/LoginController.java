@@ -13,6 +13,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+//++ 회원가입 하이퍼링크 추가
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import java.util.Objects;
+import java.io.IOException;
+
+
 public class LoginController {
     @FXML
     private TextField idField;
@@ -74,4 +84,26 @@ public class LoginController {
         System.out.println("아이디: " + username);
         System.out.println("비밀번호: " + password);
     }
+
+    //++ 회원가입 하이퍼링크 추가
+    @FXML
+    private void goToSignup(ActionEvent e) throws IOException {
+        // signup.fxml 파일을 불러와 새로운 화면 구성
+        Parent root = FXMLLoader.load(
+                Objects.requireNonNull(
+                        getClass().getResource("/com/coin_investment/view/signup.fxml")
+                )
+        );
+
+        // 현재 창(Stage)을 가져와 화면 전환
+        Stage stage = (Stage) ((Node) e.getSource()).getScene().getWindow();
+
+        // 새 Scene 설정 및 타이틀 변경
+        stage.setScene(new Scene(root));
+        stage.setTitle("회원가입");
+
+        // 화면 표시
+        stage.show();
+    }
+
 }
