@@ -23,7 +23,7 @@ public class UpbitApiService {
     }
 
     /**
-     * [내부 기능 1] 모든 원화 마켓 코드를 가져옵니다. (이 부분은 문제가 없었습니다)
+     * [내부 기능 1] 모든 원화 마켓 코드를 가져옵니다.
      */
     private List<String> getAllKrwMarketCodes() {
         List<String> krwMarketCodes = new ArrayList<>();
@@ -56,7 +56,7 @@ public class UpbitApiService {
     }
 
     /**
-     * [내부 기능 2] 특정 코인 목록의 현재가를 조회합니다. (이 부분이 수정되었습니다)
+     * [내부 기능 2] 특정 코인 목록의 현재가를 조회합니다.
      */
     private List<Coin> getCoinData(List<String> markets) {
         if (markets == null || markets.isEmpty()) return new ArrayList<>();
@@ -90,4 +90,5 @@ public class UpbitApiService {
             return null;
         }
     }
+
 }
