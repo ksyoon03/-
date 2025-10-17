@@ -4,12 +4,12 @@ import java.net.InetSocketAddress;
 
 public class ApiServer {
     public static void main(String[] args) throws Exception {
-        // 서비스 객체들을 생성합니다.
+        // 서비스 객체들을 생성
         PriceService priceService = new PriceService();
         MarketSimulator marketSimulator = new MarketSimulator(priceService);
         TradingService tradingService = new TradingService();
 
-        // 테스트용 사용자를 직접 등록합니다.
+        // 테스트용 사용자 정보 등록
         if (tradingService.getWallet("userA") == null) {
             tradingService.registerUser("userA", 100000000.0); // 1억원
             Wallet userAWallet = tradingService.getWallet("userA");
@@ -26,7 +26,7 @@ public class ApiServer {
         // 8081 포트로 서버를 생성합니다.
         HttpServer server = HttpServer.create(new InetSocketAddress(8081), 0);
 
-        // 각 경로에 맞는 핸들러를 연결합니다.
+        // 각 경로에 맞는 핸들러를 연결
         server.createContext("/trade", new TradeHandler(tradingService, marketSimulator));
         server.createContext("/wallet", new WalletHandler(tradingService, marketSimulator));
 
