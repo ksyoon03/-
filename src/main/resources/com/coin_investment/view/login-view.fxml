@@ -63,9 +63,8 @@
             text="로그인"
             onAction="#loginButtonAction"
             prefWidth="200"/>
-            <!--fx:id="loginButtonAction" : : 컨트롤러 클래스에서 이 <Button>을 참조할 때 사용할 고유 ID-->
+            <!--fx:id="loginButtonAction" : 컨트롤러 클래스에서 이 <Button>을 참조할 때 사용할 고유 ID-->
             <!--text="로그인" : 버튼에 들어갈 텍스트-->
-            <!--onAction="#LoginButton" :
-            이 버튼을 눌렀을 때, 컨트롤러 클래스에 있는 LoginButton 메소드를 실행-->
+            <!--onAction="#LoginButton" : 이 버튼을 눌렀을 때, 컨트롤러 클래스에 있는 LoginButton 메소드를 실행-->
             <!--maxWidth="200" : 해당 요소의 최대 크기를 200px로 설정-->
 </VBox>
