@@ -12,8 +12,7 @@ public class Coin {
 
     /**
      * 이 객체를 화면에 출력할 때의 형식을 지정하는 메소드입니다.
-     * (이 부분이 수정되었습니다)
-     */
+          */
     @Override
     public String toString() {
         // 2. 어떤 모양으로 찍을지 '도장 양식'을 만듭니다.
@@ -26,4 +25,5 @@ public class Coin {
         // 4. 최종적으로 완성된 문자열을 반환합니다.
         return "마켓: " + market + ", 현재가: " + formattedPrice;
     }
+
 }
