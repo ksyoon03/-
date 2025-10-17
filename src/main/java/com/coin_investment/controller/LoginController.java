@@ -7,7 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
-//
+// 웹 서버 통신을 위한 클래스들
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
